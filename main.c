@@ -8,11 +8,9 @@
 #include <string.h>
 #include <time.h>
 
-typedef enum { WORK, REST } status;
-const char* header[] = {}; // move to a separate config.h
-const char* work[] = {}; // move to a separate config.h
-const char* rest[] = {}; // move to a separate config.h
+#include "config.h"
 
+typedef enum { WORK, REST } status;
 int W = 30, R = 5, C = 4;
 
 void resizeHandler(int sig){
