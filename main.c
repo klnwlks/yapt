@@ -100,7 +100,6 @@ void printStatus(WINDOW* win) {
 }
 
 void printMenu(WINDOW* win){
-    const char* menu[] = {}; // move to a separate config.h
     int y = (sizeof(header)/sizeof(header[0]) + 3),
 	x = LINES - strlen(menu[0]) / 2;
 
