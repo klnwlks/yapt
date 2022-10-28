@@ -79,7 +79,6 @@ void alert() {
 void timer(WINDOW* win, int t, int c, status s){
     int y = 0, x = getmaxx(win);
     while (t >= 0) {
-	// wclear includes the box so i have to call this every clear
 	box(win, 0, 0);
 
 	switch (s) {
@@ -103,12 +102,14 @@ void timer(WINDOW* win, int t, int c, status s){
 	    "%d:%d",
 	    t / 60, (t % 3600) % 60);
 	y++;
-	mvwprintw(win, y, (x - 12) / 2, "Cycle %d of %d", c, C);
+	mvwprintw(win, y, (x - 12) / 2, "Cycle %d of %d", c + 1, C);
 
+	// scuffed
+	if ((t % 3600) % 60 < 10) {
+	    mvwprintw(win, y - 1, x / 2, "    ");
+	} 
 
-	wrefresh(win);
 	sleep(1);
-	wclear(win);
 	t--;
     }
 }
@@ -245,6 +246,7 @@ int main(int argc, char* argv[]){
     setlocale(LC_ALL, "");
 
     initscr();
+
     curs_set(0);
     noecho();
     pomoDashboard();
