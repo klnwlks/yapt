@@ -19,9 +19,9 @@ const char* header[] = {
 const int hsize = 11;
 
 const char* menu[] = {
-" View Stats                j J",
-" Start Timer               k K",
-" Exit                      q Q"
+" View Stats               j J",
+" Start Timer              k K",
+" Exit                     q Q"
 }; 
 const int msize = 3;
 

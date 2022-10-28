@@ -12,16 +12,17 @@
 typedef enum { WORK, REST } status;
 int W = 30, R = 5, C = 4;
 
-void resizeHandler(int sig){
+void resizeHandler(){
     // do nothing lol
+    wrefresh(stdscr);
 }
 
 // after a (very painful) hour of attempting to figure out how to grab the size of a c string array,
 // i give up and resort to using a simpler solution
-void printHeader(WINDOW* win, const char** h, size_t s){
-    int y = 1, x = (COLS - strlen(h[0])) / 2;
+void printHeader(WINDOW* win, const char** h, size_t s, int winx){
+    int y = 1, x = (winx - strlen(h[0])) / 2;
 
-    for (int i = 0; i < s; i++){
+    for (int i = 0; i < (int) s; i++){
 	mvwprintw(win, y, x, "%s", h[i]);
 	y++;
     }
@@ -29,10 +30,10 @@ void printHeader(WINDOW* win, const char** h, size_t s){
 }
 
 
-void run(char* com, char** coml) {
+void run(char* com, char** comm) {
     if (fork()) return;
     setsid();
-    execvp(com, coml);
+    execvp(com, comm);
 }
 
 void recordStats(int m){
@@ -62,7 +63,6 @@ void recordStats(int m){
 	ws++;
     }
 
-
     // write stats
     fprintf(f, "%f %d %f %d", h, s, wh, ws);
     fclose(f);
@@ -77,72 +77,93 @@ void alert() {
 // setup actual timer itself, will also print
 // current status, header and time left.
 void timer(WINDOW* win, int t, int c, status s){
-    while (c >= 0) {
+    int y = 0, x = getmaxx(win);
+    while (t >= 0) {
 	// wclear includes the box so i have to call this every clear
 	box(win, 0, 0);
 
-	mvwprintw(win, 0, 0, "Cycle %d of %d", c, C);
 	switch (s) {
 	    case WORK:
-		printHeader(win, work, 0);
-		mvwprintw(win, 0, 0, " work.");
+		y = wsize + 2;
+		printHeader(win, work, wsize, x);
+		mvwprintw(win, y, (x - 7) / 2, " work.");
+		y++;
 		break;
 	    case REST:
-		printHeader(win, rest, 0);
-		mvwprintw(win, 0, 0, " rest.");
+		y = rsize + 2;
+		printHeader(win, rest, rsize, x);
+		mvwprintw(win, y, (x - 7) / 2, " rest.");
+		y++;
 		break;
 	}
 
 	mvwprintw(win, 
 	    // set at middle
-	    0, 0,
+	    y, (x - 5) / 2,
 	    "%d:%d",
 	    t / 60, (t % 3600) % 60);
+	y++;
+	mvwprintw(win, y, (x - 12) / 2, "Cycle %d of %d", c, C);
 
 
 	wrefresh(win);
 	sleep(1);
 	wclear(win);
-	c--;
+	t--;
     }
 }
 
 void printStats(WINDOW* win) {
+    WINDOW* stats = newwin(15, 30, 
+	    (LINES - 15) / 2, (COLS - 30) / 2);
+    box(stats, 0, 0);
+
     float h = 0, wh = 0;
-    int s = 0, ws = 0; 
+    int s = 0, ws = 0, y = 1, x = getmaxx(stats); 
     FILE* f = fopen("stats", "r"); // open for read
     if (!f) return; // replace with exception
 
     // read stats
     fscanf(f, "%f %d %f %d", &h, &s, &wh, &ws); 
+    fclose(f);
 
-    WINDOW* stats = newwin(0, 0, 
-	    (LINES - 0) / 2, 
-	    (COLS - 0) / 2);
-    box(stats, 0, 0);
-    mvwprintw(stats, 0, 0, "");
+    mvwprintw(stats, y, (x - 5) / 2, "STATS");
+    y += 2;
+    mvwprintw(stats, y, (x - 15) / 2, "Total Hours: %.1f", h);
+    y++;
+    mvwprintw(stats, y, (x - 18) / 2, "no. of sessions: %d", s);
+    y += 2;
+    mvwprintw(stats, y, (x - 12) / 2, "WEEKLY STATS");
+    y += 2;
+    mvwprintw(stats, y, (x - 15) / 2, "Total Hours: %.1f", wh);
+    y++;
+    mvwprintw(stats, y, (x - 18) / 2, "no. of sessions: %d", ws);
+    mvwprintw(stats, getmaxy(stats) - 2, (x - 15) / 2, "any key to exit");
+
     wrefresh(stats);
+    wgetch(stats);
 
-    getch();
     delwin(stats);
     wrefresh(win);
-    fclose(f);
 }
 
 
 // setup window and loop for the cycles
 void startPomo(WINDOW* win){
-    WINDOW* pomo_win = newwin(0, 0,
-	    (LINES - 0) / 2, 
-	    (COLS - 0) / 2);
+    WINDOW* pomo_win = newwin(15, 30,
+	    (LINES - 15) / 2, 
+	    (COLS - 30) / 2);
+    box(pomo_win, 0, 0);
+    wclear(win);
+
     alert();
-    for (int i; i < C; i++){
+    for (int i = 0; i < C; i++){
+	timer(pomo_win, W, i, WORK);
 	alert();
-	timer(win, W, i, WORK);
+	timer(pomo_win, R, i, REST);
 	alert();
-	timer(win, C, i, WORK);
     }
-    alert();
+
     delwin(pomo_win);
     wrefresh(win);
 
@@ -169,11 +190,17 @@ void grabInput(WINDOW* win){
 	    case 'j':
 	    case 'J':
 		printStats(win);
+		printHeader(win, header, hsize, COLS);
+		printMenu(win);
+		box(win, 0, 0);
 		break;
 
 	    case 'k':
 	    case 'K':
 		startPomo(win);
+		printHeader(win, header, hsize, COLS);
+		printMenu(win);
+		box(win, 0, 0);
 		break;
 
 	    case 'q':
@@ -192,7 +219,7 @@ void pomoDashboard(){
     WINDOW* dashboard = newwin(LINES, COLS, 0, 0);
     box(dashboard, 0, 0);
 
-    printHeader(dashboard, header, hsize);
+    printHeader(dashboard, header, hsize, COLS);
     printMenu(dashboard);
     wrefresh(dashboard);
 
@@ -207,8 +234,8 @@ void help() {
 
 int main(int argc, char* argv[]){
     if (argc > 3 && argc < 5) {
-	W = atoi(argv[1]);
-	R = atoi(argv[2]);
+	W = atoi(argv[1]) * 60;
+	R = atoi(argv[2]) * 60;
 	C = atoi(argv[3]);
     } else { 
 	help(); 
@@ -218,6 +245,8 @@ int main(int argc, char* argv[]){
     setlocale(LC_ALL, "");
 
     initscr();
+    curs_set(0);
+    noecho();
     pomoDashboard();
 
     endwin();
