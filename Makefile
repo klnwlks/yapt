@@ -1,4 +1,4 @@
-CFLAGS += -lncurses -Wall -O3 -Wextra -lm
+CFLAGS += -lncurses -Wall -O3 -Wextra
 CC = gcc
 SOURCE = main.c
 EXECUTABLE = yapt

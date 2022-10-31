@@ -5,7 +5,6 @@
 #include <locale.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
 
 #include "config.h"
 
@@ -40,8 +39,11 @@ void recordStats(int m){
     // hours, sessions, then the same but weekly
     float h = 0, wh = 0;
     int s = 0, ws = 0; 
-    FILE* f = fopen("stats", "w+"); // open for read and write
-    if (!f) return; // replace with exception
+    FILE* f = fopen("stats", "r"); // open for read
+    if (!f) {
+	printw("error");
+	return;
+    } // replace with exception
 
     char day[10];
     time_t r_time = time(0);
@@ -50,8 +52,9 @@ void recordStats(int m){
 
     // read stats
     fscanf(f, "%f %d %f %d", &h, &s, &wh, &ws); 
+    freopen("stats", "w", f);
 
-    h += fmod((float)m, 60.0); 
+    h += (float)m / 60.0;
     s++;
 
     // if a week has passed, refresh statistics
@@ -59,12 +62,12 @@ void recordStats(int m){
 	wh = 0;
 	ws = 0;
     } else {
-	wh += fmod((float)m, 60.0); 
+	wh += (float)m / 60.0;
 	ws++;
     }
 
     // write stats
-    fprintf(f, "%f %d %f %d", h, s, wh, ws);
+    fprintf(f, "%.1f %d %.1f %d", h, s, wh, ws);
     fclose(f);
 }
 
