@@ -171,7 +171,7 @@ void startPomo(WINDOW* win){
     delwin(pomo_win);
     wrefresh(win);
 
-    recordStats(W * C);
+    recordStats((W / 60) * C);
     printStats(win);
 }
 
